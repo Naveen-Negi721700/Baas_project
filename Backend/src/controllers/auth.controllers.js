@@ -9,7 +9,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     console.log('username is ', username);
     console.log('email is ', email);
-    console.log('password is ', password);
+    console.log('password is ', password);   
 
     if ([username, email, password].some((field) => field?.trim() === "")) {
         throw new apiError(400, "All fields are required")
@@ -19,6 +19,8 @@ const registerUser = asyncHandler(async (req, res) => {
         $or: [{ username }, { email }]
     })
 
+
+    
     if (existingUser) {
         throw new apiError(409, "User with email or username already exists")
     }
