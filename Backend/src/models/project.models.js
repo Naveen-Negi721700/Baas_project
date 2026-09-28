@@ -18,6 +18,7 @@ const projectSchema = new Schema(
             required: true,
         },
 
+
         projectId: {
             type: String,
             required: true,
@@ -31,6 +32,8 @@ const projectSchema = new Schema(
         secretKey: {
             type: String,
         },
+
+
 
         isActive: {
             type: Boolean,

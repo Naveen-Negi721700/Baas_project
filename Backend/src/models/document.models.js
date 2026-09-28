@@ -9,5 +9,9 @@ const documentSchema = new Schema({
         type:Object,
         required:true
     }
+
 },{timestamps:true})
 export const Document=mongoose.model("Document",documentSchema)
+
+
+
