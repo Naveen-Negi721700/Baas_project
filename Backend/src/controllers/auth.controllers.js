@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { apiError } from "../utils/apiError.js";
-import { apiResponse } from "../utils/apiResponse.js";
+import { apiErrors } from "../utils/apiError.js";
+import { apiResponce } from "../utils/apiResponce.js";
 import { User } from "../models/user.model.js";
 
 
@@ -9,10 +9,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
     console.log('username is ', username);
     console.log('email is ', email);
-    console.log('password is ', password);   
+    console.log('password is ', password);
 
     if ([username, email, password].some((field) => field?.trim() === "")) {
-        throw new apiError(400, "All fields are required")
+        throw new apiErrors(400, "All fields are required")
     }
 
     const existingUser = await User.findOne({
@@ -20,21 +20,52 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
 
-    
+
     if (existingUser) {
-        throw new apiError(409, "User with email or username already exists")
+        throw new apiErrors(409, "User with email or username already exists")
     }
 
     const avatarLocalPath = req.files?.avatar?.[0]?.path
     if (!avatarLocalPath) {
-        throw new apiError(400, "Avatar image is required")
+        throw new apiErrors (400, "Avatar image is required")
     }
-    
+
     let coverImageLocalPath;
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
         coverImageLocalPath = req.files.coverImage[0].path
     }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    console.log("avatar upload result:", avatar)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+
+    if (!avatar) {
+        throw new apiErrors(400, "avatar is required")
+
+    }
+
+    const user=await User.create({
+        username,
+        email,
+        password,
+        avatar: avatar.url,
+        coverImage: coverImage?.url
+    })
+
+
+   const createdUser = await User.findById(user._id).select("-password -refreshToken") 
+   if (!createdUser) {
+    throw new apiErrors(500, "User creation failed")
+   }
+
+   return res.status(201).json(
+        new apiResponce(201, createdUser, "User register successfully")
+    )
+
     
+
+
 
 })
 
