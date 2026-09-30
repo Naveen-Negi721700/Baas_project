@@ -9,8 +9,8 @@ app.get('/',(req,res)=>{
 connectDb()
 .then(()=>{
 
-    app.listen(port | 3000 ,()=>{
-         console.log(`Example app listening on port ${port}`)
+   app.listen(port || 3000, () => {
+    console.log(`Example app listening on port ${port || 3000}`)
         
     })
 })

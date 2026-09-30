@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiErrors } from "../utils/apiError.js";
 import { apiResponce } from "../utils/apiResponce.js";
 import { User } from "../models/user.model.js";
+import { uploadOnCloudinary } from "../utils/cloudineary.js"
 
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -20,7 +21,6 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
 
-
     if (existingUser) {
         throw new apiErrors(409, "User with email or username already exists")
     }
@@ -30,14 +30,8 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new apiErrors (400, "Avatar image is required")
     }
 
-    let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
-        coverImageLocalPath = req.files.coverImage[0].path
-    }
-
     const avatar = await uploadOnCloudinary(avatarLocalPath)
     console.log("avatar upload result:", avatar)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
 
     if (!avatar) {
@@ -49,8 +43,7 @@ const registerUser = asyncHandler(async (req, res) => {
         username,
         email,
         password,
-        avatar: avatar.url,
-        coverImage: coverImage?.url
+        avatar: avatar.url
     })
 
 
@@ -62,10 +55,6 @@ const registerUser = asyncHandler(async (req, res) => {
    return res.status(201).json(
         new apiResponce(201, createdUser, "User register successfully")
     )
-
-    
-
-
 
 })
 
