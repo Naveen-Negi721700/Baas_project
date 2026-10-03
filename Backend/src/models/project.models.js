@@ -17,14 +17,11 @@ const projectSchema = new Schema(
             type: String,
             required: true,
         },
-
-
-        projectId: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-
+        // projectId: {
+        //     type: String,
+        //     required: true,
+        //     unique: true,
+        // },
         publicKey: {
             type: String,
         },
