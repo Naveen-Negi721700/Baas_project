@@ -7,11 +7,6 @@ const collectionSchema = new Schema(
             ref: "Project",
             required: true,
         },
- 
-      
-
-
-
         name: {
             type: String,
             required: true,

@@ -1,29 +1,38 @@
-import { Router } from "express";
-import { registerUser, loginUser, logoutUser, getCurrentUser, refreshaccessToken } from "../controllers/auth.controllers.js";
-import { createProject, getProjects, getProject,updateProject, deleteProject } from "../controllers/project.controllers.js";
-import { createApiKey, getApiKeys, getApiKey, deleteApiKey} from "../controllers/apiKey.controllers.js";
-import { upload } from "../middlewares/multer.middlewares.js";
-import { verifyJWT } from "../middlewares/auth.middlewares.js";
+// import { Router } from "express";
+// import { registerUser, loginUser, logoutUser, getCurrentUser, refreshaccessToken } from "../controllers/auth.controllers.js";
+// import { createProject, getProjects, getProject,updateProject, deleteProject } from "../controllers/project.controllers.js";
+// import { createApiKey, getApiKeys, getApiKey, deleteApiKey} from "../controllers/apiKey.controllers.js";
+// import { createCollection, getCollections, getCollection, updateCollection, deleteCollection  } from "../controllers/collection.controllers.js";
+// import { upload } from "../middlewares/multer.middlewares.js";
+// import { verifyJWT } from "../middlewares/auth.middlewares.js";
 
-const routes=Router();
+// const routes=Router();
 
-routes.route("/register").post(upload.fields([{ name: "avatar", maxCount: 1 },{ name: "coverImage", maxCount: 1 }]),registerUser);
-routes.route("/logIn").post(loginUser);
-routes.route("/logOut").post(verifyJWT, logoutUser);
-routes.route("/currentUser").get(verifyJWT, getCurrentUser);
-routes.route("/refreshAccessToken").post(refreshaccessToken);
-
-
-routes.route("/createProject").post(verifyJWT, createProject);
-routes.route("/getProjects").get(verifyJWT, getProjects);
-routes.route("/getProject/:projectId").get(verifyJWT, getProject);
-routes.route("/updateProject/:projectId").patch(verifyJWT, updateProject);
-routes.route("/deleteProject/:projectId").delete(verifyJWT, deleteProject);
+// routes.route("/register").post(upload.fields([{ name: "avatar", maxCount: 1 },{ name: "coverImage", maxCount: 1 }]),registerUser);
+// routes.route("/logIn").post(loginUser);
+// routes.route("/logOut").post(verifyJWT, logoutUser);
+// routes.route("/currentUser").get(verifyJWT, getCurrentUser);
+// routes.route("/refreshAccessToken").post(refreshaccessToken);
 
 
-routes.route("/createApiKey/:projectId").post(verifyJWT, createApiKey);
-routes.route("/getApiKeys/:projectId").get(verifyJWT, getApiKeys);
-routes.route("/getApiKey/:apiKeyId").get(verifyJWT, getApiKey);
-routes.route("/deleteApiKey/:apiKeyId").delete(verifyJWT, deleteApiKey);
+// routes.route("/createProject").post(verifyJWT, createProject);
+// routes.route("/getProjects").get(verifyJWT, getProjects);
+// routes.route("/getProject/:projectId").get(verifyJWT, getProject);
+// routes.route("/updateProject/:projectId").patch(verifyJWT, updateProject);
+// routes.route("/deleteProject/:projectId").delete(verifyJWT, deleteProject);
 
-export default routes
+
+// routes.route("/createApiKey/:projectId").post(verifyJWT, createApiKey);
+// routes.route("/getApiKeys/:projectId").get(verifyJWT, getApiKeys);
+// routes.route("/getApiKey/:apiKeyId").get(verifyJWT, getApiKey);
+// routes.route("/deleteApiKey/:apiKeyId").delete(verifyJWT, deleteApiKey);
+
+
+
+// routes.route("/createCollection/:projectId").post(verifyJWT, createCollection);
+// routes.route("/getCollections/:projectId").get(verifyJWT, getCollections);
+// routes.route("/getCollection/:projectId/:collectionId").get(verifyJWT, getCollection);
+// routes.route("/updateCollection/:projectId/:collectionId").patch(verifyJWT, updateCollection);
+// routes.route("/deleteCollection/:projectId/:collectionId").delete(verifyJWT, deleteCollection);
+
+// export default routes
