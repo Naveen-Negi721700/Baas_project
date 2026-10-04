@@ -30,8 +30,6 @@ const projectSchema = new Schema(
             type: String,
         },
 
-
-
         isActive: {
             type: Boolean,
             default: true,
