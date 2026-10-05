@@ -19,11 +19,13 @@ import authRoutes from "./routes/auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
 import apiKeyRoutes from "./routes/apiKey.routes.js";
 import collectionRoutes from "./routes/collection.routes.js";
+import documentRoutes from "./routes/document.routes.js";
 
 app.use("/api/v1/Baas", authRoutes);
 app.use("/api/v1/Baas", projectRoutes);
 app.use("/api/v1/Baas", apiKeyRoutes);
 app.use("/api/v1/Baas", collectionRoutes);
+app.use("/api/v1/Baas", documentRoutes);
 
 
 // app.use("/api/v1/auth", authRoutes);
