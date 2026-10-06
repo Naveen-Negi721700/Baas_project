@@ -16,6 +16,11 @@ const apiKeySchema = new Schema(
             type: String,
             required: true,
         },
+          keyId: {
+            type: String,
+            required: true,
+            unique: true,
+        },
         key: {
             type: String,
             required: true,

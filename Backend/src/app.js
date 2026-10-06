@@ -28,8 +28,12 @@ app.use("/api/v1/Baas", collectionRoutes);
 app.use("/api/v1/Baas", documentRoutes);
 
 
+import publicRoutes from "./routes/public.routes/public.routes.js";
+app.use("/api/v1/public", publicRoutes);
+
+
+export default app
 // app.use("/api/v1/auth", authRoutes);
 // app.use("/api/v1/projects", projectRoutes);
 // app.use("/api/v1/api-keys", apiKeyRoutes);
 // app.use("/api/v1/collections", collectionRoutes);
-export default app
