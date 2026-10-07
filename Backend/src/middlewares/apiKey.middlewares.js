@@ -25,7 +25,8 @@ export const verifyApiKey = asyncHandler(async (req, res, next) => {
             401,
             "Invalid API key"
         );
-    }
+    }    
+
 
     const isValid = await bcrypt.compare(
         apiKeyValue,

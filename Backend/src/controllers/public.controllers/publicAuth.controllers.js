@@ -1,73 +1,82 @@
-// import { asyncHandler } from "../../utils/asyncHandler.js";
-// import { apiErrors } from "../../utils/apiError.js";
-// import { apiResponce } from "../../utils/apiResponce.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { apiErrors } from "../../utils/apiError.js";
+import { apiResponce } from "../../utils/apiResponce.js";
 
-// import { Collection } from "../../models/collection.models.js";
-// import { Document } from "../../models/document.models.js";
+import { Collection } from "../../models/collection.models.js";
+import { Document } from "../../models/document.models.js";
 
-// import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 
-// const registerUser = asyncHandler(async (req, res) => {
+const registerUser = asyncHandler(async (req, res) => {
 
-//     const { name, email, password } = req.body;
+    const { collectionId } = req.params;
+    const { name, email, password } = req.body;
 
-//     // Check required fields
-//     if ([name, email, password].some((field) => field?.trim() === "")) {
-//         throw new apiErrors(400, "All fields are required");
-//     }
+    if (!collectionId) {
+        throw new apiErrors(400, "Collection ID is required");
+    }
 
-//     // Get project from API key
-//     const projectId = req.apiKey.projectId;
+    if (!name || !email || !password) {
+        throw new apiErrors(
+            400,
+            "Name, email and password are required"
+        );
+    }
 
-//     // Find users collection of this project
-//     const usersCollection = await Collection.findOne({
-//         projectId: projectId,
-//         name: "users"
-//     });
+    // Project comes from API key
+    const projectId = req.apiKey.projectId;
 
-//     if (!usersCollection) {
-//         throw new apiErrors(404, "Users collection not found");
-//     }
+    // Find collection belonging to this project
+    const collection = await Collection.findOne({
+        _id: collectionId,
+        projectId: projectId
+    });
 
-//     // Check if email already exists
-//     const existingUser = await Document.findOne({
-//         collectionId: usersCollection._id,
-//         "data.email": email
-//     });
+    if (!collection) {
+        throw new apiErrors(
+            404,
+            "Collection not found"
+        );
+    }
 
-//     if (existingUser) {
-//         throw new apiErrors(409, "User with this email already exists");
-//     }
+    // Now you know exactly which collection to use
+    console.log(collection.name);
 
-//     // Hash password
-//     const hashedPassword = await bcrypt.hash(password, 10);
+    // Check existing user
+    const existingUser = await Document.findOne({
+        collectionId: collection._id,
+        "data.email": email.toLowerCase()
+    });
 
-//     // Create user document
-//     const user = await Document.create({
-//         collectionId: usersCollection._id,
-//         data: {
-//             name,
-//             email,
-//             password: hashedPassword
-//         }
-//     });
+    if (existingUser) {
+        throw new apiErrors(
+            409,
+            "User with this email already exists"
+        );
+    }
 
-//     // Don't send password to client
-//     const userData = {
-//         _id: user._id,
-//         name: user.data.name,
-//         email: user.data.email
-//     };
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-//     return res
-//         .status(201)
-//         .json(
-//             new apiResponce(
-//                 201,
-//                 userData,
-//                 "User registered successfully"
-//             )
-//         );
-// });
+    const user = await Document.create({
+        collectionId: collection._id,
+        data: {
+            name,
+            email: email.toLowerCase(),
+            password: hashedPassword
+        }
+    });
 
-// export { registerUser };
+    return res.status(201).json(
+        new apiResponce(
+            201,
+            {
+                _id: user._id,
+                name: user.data.name,
+                email: user.data.email
+            },
+            "User registered successfully"
+        )
+    );
+});
+
+export { registerUser };
