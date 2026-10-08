@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import bcrypt from "bcryptjs";
 
 const apiKeySchema = new Schema(
     {
@@ -7,30 +8,36 @@ const apiKeySchema = new Schema(
             ref: "User",
             required: true,
         },
+
         projectId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Project",
             required: true,
         },
+
         name: {
             type: String,
             required: true,
         },
+
         keyId: {
             type: String,
             required: true,
             unique: true,
         },
+
         key: {
             type: String,
             required: true,
             unique: true,
         },
+
         type: {
             type: String,
             enum: ["public", "secret"],
             required: true,
         },
+
         isActive: {
             type: Boolean,
             default: true,
@@ -41,4 +48,22 @@ const apiKeySchema = new Schema(
     }
 );
 
-export const ApiKey = mongoose.model("ApiKey", apiKeySchema);
+
+apiKeySchema.pre("save", async function () {
+    if (!this.isModified("key") || !this.key) {
+        return;
+    }
+    this.key = await bcrypt.hash(this.key, 10);
+});
+
+apiKeySchema.methods.compareApiKey = async function (apiKeyValue) {
+
+    if (!apiKeyValue) { return false;}
+    return await bcrypt.compare(
+        apiKeyValue,
+        this.key
+    );
+};
+
+
+export const ApiKey = mongoose.model("ApiKey",apiKeySchema);

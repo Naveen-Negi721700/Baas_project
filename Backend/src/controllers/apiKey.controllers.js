@@ -4,48 +4,54 @@ import { apiResponce } from "../utils/apiResponce.js";
 import { ApiKey } from "../models/apiKey.models.js"
 import { Project } from "../models/project.models.js";
 import crypto from "crypto";
-import bcrypt from "bcryptjs";
+
 
 
 const createApiKey = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
-    console.log('projectId is ', projectId);
 
+    const { projectId } = req.params;
     const { name, type } = req.body;
-    console.log('name is ', name);
-    console.log('type is ', type);
+
     if (!projectId) {
-        throw new apiErrors(400, "Project ID is required");
+        throw new apiErrors( 400, "Project ID is required");
     }
-    if ([name, type].some((field) => field?.trim() === "")) {
-        throw new apiErrors(400, "All fields are required");
+    if (!name || !name.trim()) {
+        throw new apiErrors(400,"API key name is required" );
+    }
+
+    if (!type || !type.trim()) {
+        throw new apiErrors(400,"API key type is required" );
     }
 
     if (!["public", "secret"].includes(type)) {
-        throw new apiErrors(400, "Invalid type. Must be 'public' or 'secret'");
+        throw new apiErrors(400,"Invalid type. Must be 'public' or 'secret'");
     }
 
-    const project = await Project.findOne({ _id: projectId, userId: req.user._id });
+    const project = await Project.findOne({
+        _id: projectId,
+        userId: req.user._id
+    });
+
+
     if (!project) {
-        throw new apiErrors(404, "Project not found");
+        throw new apiErrors(404,"Project not found"  );
     }
 
-    const apiKeyValue = `sk_${crypto.randomBytes(32).toString("hex")}`;
-    const hashedApiKey = await bcrypt.hash(apiKeyValue, 10);
-    const keyId = crypto.randomBytes(8).toString("hex");
+    const apiKeyValue =`sk_${crypto.randomBytes(32).toString("hex")}`;
+
+    const keyId =crypto.randomBytes(8).toString("hex");
 
     const apiKey = await ApiKey.create({
         userId: req.user._id,
         projectId: project._id,
-        name,
+        name: name.trim(),
         keyId,
-        key: hashedApiKey,
+        key: apiKeyValue,
         type,
-        isActive: true,
-    })
-    console.log('apiKey is ', apiKey);
-    return res.status(201).json(new apiResponce(201, {apiKeyValue,keyId}, "API Key created successfully"))
-})
+        isActive: true
+    });
+    return res.status(201).json( new apiResponce( 201, { apiKeyValue, keyId }, "API Key created successfully"));
+});
 
 const getApiKeys = asyncHandler(async (req, res) => {
     const { projectId } = req.params;
