@@ -6,7 +6,6 @@ import { UserSessions } from "../models/userSession.models.js";
 import { uploadOnCloudinary } from "../utils/cloudineary.js"
 import jwt from "jsonwebtoken";
 
-
 const getAccessAndRefreshToken = async (userId) => {
 
     try {
