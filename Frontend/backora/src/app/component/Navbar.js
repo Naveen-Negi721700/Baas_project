@@ -1,8 +1,13 @@
 "use client"
 import React from 'react'
 import Link from 'next/link'
+import Image from "next/image";
+import { useAuth } from "../context/authContext";
+
 
 const Navbar = () => {
+
+    const { user, loading } = useAuth();
     return (
         <div className='sticky top-0 z-50 bg-[#0b0b0f] bg-[radial-gradient(ellipse_70%_90%_at_100%_0%,rgba(190,40,80,0.35),transparent_65%)] p-3'>
             <div className='bg-black/60 text-white flex justify-between items-center h-20 px-5 rounded-2xl border border-white/10'>
@@ -22,27 +27,89 @@ const Navbar = () => {
                 </div>
 
                 {/* Right */}
-                <div className='flex items-center gap-5 text-xs'>
+                {loading ? (
+                    <div className='flex items-center gap-5 text-xs'>
 
 
-                    <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signup"}>
+                        <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signup"}>
 
-                        <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignUp</button>
-                    </Link>
+                            <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignUp</button>
+                        </Link>
 
-                    <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signin"}>
-                    <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignIn</button>
-                    </Link>
+                        <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signin"}>
+                            <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignIn</button>
+                        </Link>
 
-                    <div className='flex items-center gap-2.5'>
-                        {/* <div className='leading-tight'>
+                        <div className='flex items-center gap-2.5'>
+                            {/* <div className='leading-tight'>
                             <p className='font-medium'>SignUp</p>
                             <p className='text-white/50'>SignIn</p>
                         </div> */}
-                        <div className='w-10 h-10 rounded-full bg-white/10 flex items-center justify-center'>WO</div>
+                            <div className='w-10 h-10 rounded-full bg-white/10 flex items-center justify-center'>WO</div>
+
+                        </div>
+                    </div>
+                ) : user ? (
+                    <div className='flex items-center gap-5 text-xs'>
+
+
+                        <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signout"}>
+
+                            <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignOut</button>
+                        </Link>
+
+
+
+                        <div className='flex items-center gap-2.5'>
+                            {/* <div className='leading-tight'>
+                            <p className='font-medium'>SignUp</p>
+                            <p className='text-white/50'>SignIn</p>
+                        </div> */}
+
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                                {user.avatar ? (
+                                    <Image
+                                        src={user.avatar}
+                                        alt="User avatar"
+                                        width={40}
+                                        height={40}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <span>
+                                        {user.username?.charAt(0)?.toUpperCase() || "U"}
+                                    </span>
+                                )}
+                            </div>
+
+                        </div>
 
                     </div>
-                </div>
+                ) : (
+                    <div className='flex items-center gap-5 text-xs'>
+
+
+                        <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signup"}>
+
+                            <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignUp</button>
+                        </Link>
+
+                        <Link className='flex items-center gap-2 text-lg font-semibold' href={"/signin"}>
+                            <button className='border border-white/20 rounded-md px-2.5 py-1 text-lg hover:bg-white/10'>SignIn</button>
+                        </Link>
+
+                        <div className='flex items-center gap-2.5'>
+                            {/* <div className='leading-tight'>
+                            <p className='font-medium'>SignUp</p>
+                            <p className='text-white/50'>SignIn</p>
+                        </div> */}
+                            <div className='w-10 h-10 rounded-full bg-white/10 flex items-center justify-center'>WO</div>
+
+                        </div>
+                    </div>
+                )
+                }
 
             </div>
         </div>
