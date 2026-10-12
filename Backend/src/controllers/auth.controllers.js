@@ -196,13 +196,10 @@ const getCurrentUser = asyncHandler(async (req,res)=>{
 })
 
 const refreshaccessToken=asyncHandler(async(req,res)=>{
-
   const incomingRefreshToken=req?.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "");
-
   if(!incomingRefreshToken){
     throw new apiErrors(401,"Unauthorized")
   }
-
   try {
     const decodedToken=jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET);
 

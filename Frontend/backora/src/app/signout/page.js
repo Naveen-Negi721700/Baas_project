@@ -9,31 +9,30 @@ const Signout = () => {
     const router = useRouter();
 
     const handleSignout = async () => {
-        // try {
-        //     await axios.post(`${process.env.NEXT_PUBLIC_FETCH_URI}/logout`, {},
-        //         {
-        //             withCredentials: true
-        //         }
-        //     );
+        try {
+            await axios.post(`${process.env.NEXT_PUBLIC_FETCH_URI}/logOut`, {},
+                {
+                    withCredentials: true
+                }
+            );
+            toast("👋 Signed out successfully", {
+                position: "top-right",
+                autoClose: 2000,
+                theme: "light",
+            });
 
-        //     toast("👋 Signed out successfully", {
-        //         position: "top-right",
-        //         autoClose: 2000,
-        //         theme: "light",
-        //     });
+            router.push("/signin");
 
-        //     router.push("/signin");
+        } catch (error) {
+            console.error(
+                error.response?.data || error.message
+            );
 
-        // } catch (error) {
-        //     console.error(
-        //         error.response?.data || error.message
-        //     );
-
-        //     toast.error(
-        //         error.response?.data?.message ||
-        //         "Failed to sign out"
-        //     );
-        // }
+            toast.error(
+                error.response?.data?.message ||
+                "Failed to sign out"
+            );
+        }
     }
 
     return (

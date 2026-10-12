@@ -18,12 +18,10 @@ const projectUserSessionSchema = new Schema(
             ref: "Document",
             required: true
         },
-
         refreshToken: {
             type: String,
-            required: true
+            default: null
         },
-
         expiresAt: {
             type: Date,
             required: true
@@ -35,7 +33,7 @@ const projectUserSessionSchema = new Schema(
     },
     {
         timestamps: true
-     }
+    }
 );
 
-export const ProjectUserSession = mongoose.model("ProjectUserSession",projectUserSessionSchema);
+export const ProjectUserSession = mongoose.model("ProjectUserSession", projectUserSessionSchema);

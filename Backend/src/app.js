@@ -8,6 +8,7 @@ app.use(cors({
     origin: process.env.CORS_ORIGIN,
     credentials:true,
 }))
+console.log("CORS_ORIGIN:", process.env.CORS_ORIGIN);
 
 app.use(express.json())
 app.use(express.urlencoded({extended: true}))

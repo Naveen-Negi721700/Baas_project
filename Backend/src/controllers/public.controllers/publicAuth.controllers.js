@@ -1,39 +1,48 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { apiErrors } from "../../utils/apiError.js";
 import { apiResponce } from "../../utils/apiResponce.js";
-
+import { ProjectUserSession } from "../../models/publicUserSession.models.js";
 import { Collection } from "../../models/collection.models.js";
 import { Document } from "../../models/document.models.js";
+import jwt from "jsonwebtoken";
 
 
-const getAccessAndRefreshToken = async (documentUserId,projectId,collectionId) => {
+const getAccessAndRefreshToken = async (documentUserId, projectId, collectionId) => {
     try {
-        // 1. Find the user document
+        // 1. Find the user in the specified collection
         const documentUser = await Document.findOne({
-        _id: documentUserId,
-        collectionId
-    });
+            _id: documentUserId,
+            collectionId
+        });
 
         if (!documentUser) {
             throw new apiErrors(404, "User not found");
         }
 
-        // 2. Generate tokens for this user
-        const accessToken = documentUser.generateAccessToken();
-        const refreshToken = documentUser.generateRefreshToken();
+        const accessToken = documentUser.generateAccessToken(
+            projectId,
+            collectionId
+        );
 
-        // 3. Find an existing refresh-token session
+        const refreshToken = documentUser.generateRefreshToken(
+            projectId,
+            collectionId
+        );
+
+        // 3. Calculate refresh-token expiry
         const expiresAt = new Date(
-        Date.now() + 10 * 24 * 60 * 60 * 1000
-    );
+            Date.now() + 10 * 24 * 60 * 60 * 1000
+        );
 
-    await ProjectUserSession.create({
-        projectId,
-        collectionId,
-        documentUserId: documentUser._id,
-        refreshToken,
-        expiresAt
-    });
+        // 4. Save the session
+        await ProjectUserSession.create({
+            projectId,
+            collectionId,
+            documentUserId: documentUser._id,
+            refreshToken,
+            expiresAt
+        });
+
         return {
             accessToken,
             refreshToken
@@ -41,6 +50,10 @@ const getAccessAndRefreshToken = async (documentUserId,projectId,collectionId) =
 
     } catch (error) {
         console.error("Token generation error:", error);
+
+        if (error instanceof apiErrors) {
+            throw error;
+        }
 
         throw new apiErrors(500, "Failed to generate tokens");
     }
@@ -147,7 +160,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const loginIdentifier = usernameOrEmail.trim().toLowerCase();
     if (loginIdentifier.includes("@")) {
-       const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 
         if (!gmailRegex.test(loginIdentifier)) {
             throw new apiErrors(
@@ -182,7 +195,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new apiErrors(401, "Invalid username/email or password");
     }
 
- const { accessToken, refreshToken } =await getAccessAndRefreshToken(DocumentUser._id,projectId,collection._id);
+    const { accessToken, refreshToken } = await getAccessAndRefreshToken(DocumentUser._id, projectId, collection._id);
     const loggedInUser = {
         _id: DocumentUser._id,
         collectionId: DocumentUser.collectionId,
@@ -206,5 +219,196 @@ const loginUser = asyncHandler(async (req, res) => {
 
 
 })
+const logoutUser = asyncHandler(async (req, res) => {
+    const session = req.projectUserSession;
 
-export { registerUser, loginUser };
+    if (!session) {
+        throw new apiErrors(401, "User session not found");
+    }
+
+    // Revoke this session in the database
+    session.isRevoked = true;
+    session.refreshToken = null;
+    await session.save();
+
+    // Clear the authentication cookies
+    const options = {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/"
+    };
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(
+            new apiResponce(
+                200,
+                {},
+                "User logged out successfully"
+            )
+        );
+});
+const getCurrentUser = asyncHandler(async (req, res) => {
+    const documentUser = req.projectUser;
+
+    if (!documentUser) {
+        throw new apiErrors(401, "User not authenticated");
+    }
+
+    const loggedInUser = {
+        _id: documentUser._id,
+        collectionId: documentUser.collectionId,
+        username: documentUser.data.username,
+        email: documentUser.data.email
+    };
+
+    return res.status(200).json(
+        new apiResponce(
+            200,
+            loggedInUser,
+            "Current user fetched successfully"
+        )
+    );
+});
+// const refreshAccessToken = asyncHandler(async (req, res) => {
+//     // Get refresh token from cookie or request body
+//     const incomingRefreshToken = req.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "");
+
+//     if (!incomingRefreshToken) {
+//         throw new apiErrors(401, "Refresh token is required");
+//     }
+//     let decoded;
+
+//     try {
+//         decoded = jwt.verify(incomingRefreshToken, process.env.PUBLIC_REFRESH_TOKEN_SECRET);
+//     } catch (error) {
+//         throw new apiErrors(401, "Invalid or expired refresh token");
+//     }
+
+//     const { _id, projectId, collectionId } = decoded;
+
+//     if (!_id || !projectId || !collectionId) {
+//         throw new apiErrors(401, "Invalid refresh token payload");
+//     }
+
+//     // Find the active session matching this refresh token
+//     const session = await ProjectUserSession.findOne({
+//         documentUserId: _id,
+//         projectId,
+//         collectionId,
+//         refreshToken: incomingRefreshToken,
+//         isRevoked: false,
+//         expiresAt: { $gt: new Date() }
+//     });
+
+//     if (!session) {
+//         throw new apiErrors(
+//             401,
+//             "Session expired, revoked, or refresh token is invalid"
+//         );
+//     }
+
+//     // Verify that the project user still exists
+//     const documentUser = await Document.findOne({
+//         _id,
+//         collectionId
+//     });
+
+//     if (!documentUser) {
+//         throw new apiErrors(401, "Project user not found");
+//     }
+
+//     const { accessToken, refreshToken } = await getAccessAndRefreshToken(documentUser._id, projectId, collectionId);
+//     session.isRevoked = true;
+//     session.refreshToken = null;
+//     await session.save();
+
+//     const options = {
+//         httpOnly: true,
+//         secure: false,
+//         sameSite: "lax",
+//         path: "/"
+//     };
+
+//     return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(
+//         new apiResponce(200, { accessToken, refreshToken }, "Access token refreshed successfully")
+//     )
+// });
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken =req.cookies?.refreshToken ||req.body?.refreshToken ||req.header("Authorization")?.replace("Bearer ", "");
+
+    if (!incomingRefreshToken) {
+        throw new apiErrors(401, "Refresh token is required");
+    }
+    let decoded;
+
+    try {
+        decoded = jwt.verify( incomingRefreshToken, process.env.PUBLIC_REFRESH_TOKEN_SECRET );
+    } catch (error) {
+        throw new apiErrors(401, "Invalid or expired refresh token");
+    }
+
+    const { _id, projectId, collectionId } = decoded;
+
+    if (!_id || !projectId || !collectionId) {
+        throw new apiErrors(401, "Invalid refresh token payload");
+    }
+
+    const session = await ProjectUserSession.findOne({
+        documentUserId: _id,
+        projectId,
+        collectionId,
+        refreshToken: incomingRefreshToken,
+        isRevoked: false,
+        expiresAt: { $gt: new Date() }
+    });
+
+    if (!session) {
+        throw new apiErrors(401,"Session expired, revoked, or refresh token is invalid");
+    }
+
+    const documentUser = await Document.findOne({
+        _id,
+        collectionId
+    });
+
+    if (!documentUser) {
+        throw new apiErrors(401, "Project user not found");
+    }
+
+  
+    const accessToken = documentUser.generateAccessToken(projectId,collectionId );
+
+    const refreshToken = documentUser.generateRefreshToken(projectId,collectionId);
+
+    session.refreshToken = refreshToken;
+    session.expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+
+    await session.save();
+
+      const options = {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/"
+    };
+
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new apiResponce(
+                200,
+                { accessToken },
+                "Access token refreshed successfully"
+            )
+        );
+});
+
+
+export { registerUser, loginUser, logoutUser, getCurrentUser, refreshAccessToken };

@@ -40,7 +40,7 @@ const handleSubmit = async (e) => {
         });
 
         toast.success("Project created successfully!");
-        router.push("/");
+        router.push("/collection");
 
     } catch (error) {
         console.error(error.response?.data || error.message);

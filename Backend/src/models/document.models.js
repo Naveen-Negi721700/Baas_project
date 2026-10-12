@@ -36,30 +36,38 @@ documentSchema.methods.comparePassword = async function (password) {
     return await bcrypt.compare(password,this.data.password);
 };
 
-documentSchema.methods.generateAccessToken = function () {
+documentSchema.methods.generateAccessToken = function (
+    projectId,
+    collectionId
+) {
     return jwt.sign(
         {
             _id: this._id,
-            collectionId: this.collectionId,
+            projectId,
+            collectionId,
             email: this.data.email,
             username: this.data.username
         },
-        process.env.ACCESS_TOKEN_SECRET,
+        process.env.PUBLIC_ACCESS_TOKEN_SECRET,
         {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+            expiresIn: process.env.PUBLIC_ACCESS_TOKEN_EXPIRY
         }
     );
 };
 
-documentSchema.methods.generateRefreshToken = function () {
+documentSchema.methods.generateRefreshToken = function (
+    projectId,
+    collectionId
+) {
     return jwt.sign(
         {
             _id: this._id,
-            collectionId: this.collectionId
+            projectId,
+            collectionId
         },
-        process.env.REFRESH_TOKEN_SECRET,
+        process.env.PUBLIC_REFRESH_TOKEN_SECRET,
         {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+            expiresIn: process.env.PUBLIC_REFRESH_TOKEN_EXPIRY
         }
     );
 };
