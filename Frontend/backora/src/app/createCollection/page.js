@@ -5,6 +5,7 @@ import Link from 'next/link'
 import axios from 'axios'
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast, Bounce } from 'react-toastify';
+import { useProject } from "../context/projectContext";
 
 // ready-made collections, users can't create their own fields
 const predefined = [
@@ -14,21 +15,22 @@ const predefined = [
         short: "User accounts",
         desc: "You can use signin, signup and signout feature.",
         schema: {
-            name: { type: "String", required: true, unique: false },
+            username: { type: "String", required: true, unique: false },
             email: { type: "String", required: true, unique: true },
             password: { type: "String", required: true, unique: false },
             avatar: { type: "String", required: false, unique: false },
         },
     },
 ]
-
 const CreateCollection = () => {
     const [name, setname] = useState("")
     const [selected, setselected] = useState(null)
+    const { projectId } = useProject();
+
     const router = useRouter();
 
     // get this from your selected project
-    const projectId = "YOUR_PROJECT_ID"
+    const projectid = projectId;
 
     const handleSelect = (item) => {
         setselected(item)
@@ -38,15 +40,20 @@ const CreateCollection = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (!projectId) {
+            toast.error("Please select a project first");
+            return;
+        }
+
         if (!selected) {
             toast.error("Please select a predefined collection");
             return
         }
 
         try {
-            const data = { projectId, name, schema: selected.schema, isSystem: true }
+            const data = { name, schema: selected.schema }
 
-            const res = await axios.post(`${process.env.NEXT_PUBLIC_FETCH_URI}/collections`, data,
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_FETCH_URI}/createCollection/${projectid}`, data,
                 {
                     withCredentials: true
                 }
@@ -60,7 +67,7 @@ const CreateCollection = () => {
                 theme: "light",
             });
 
-            router.push("/collections");
+            router.push("/collection");
 
         } catch (error) {
             console.error(

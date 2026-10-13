@@ -1,29 +1,110 @@
 "use client"
-import React from 'react'
-import { useState } from 'react'
-import Link from 'next/link'
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import axios from "axios";
+import { useProject } from "../context/projectContext";
 
-const collections = [
-    {
-        name: "users", desc: "User accounts", docs: 128, fields: 7, updated: "2 min ago",
-        icon: <svg className='w-5 h-5' viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-    },
-    {
-        name: "products", desc: "Product catalog", docs: 64, fields: 6, updated: "1 hour ago",
-        icon: <svg className='w-5 h-5' viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /><path d="m7.5 4.27 9 5.15" /></svg>
-    },
-    {
-        name: "orders", desc: "Customer orders", docs: 312, fields: 6, updated: "Yesterday",
-        icon: <svg className='w-5 h-5' viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
-    },
-]
+// turns a date into "2 min ago", "1 hour ago", "Yesterday"
+const timeAgo = (date) => {
+    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+    if (seconds < 60) return "Just now"
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hour ago`
+    if (seconds < 172800) return "Yesterday"
+    return `${Math.floor(seconds / 86400)} days ago`
+}
 
 const Collections = () => {
-    const [search, setsearch] = useState("")
+    const { projectId, isReady } = useProject();
 
-    const filtered = collections.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
-    const totalDocs = collections.reduce((sum, c) => sum + c.docs, 0)
-    const totalFields = collections.reduce((sum, c) => sum + c.fields, 0)
+    const [search, setsearch] = useState("");
+    const [collection, setCollection] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (!isReady) return;
+
+        if (!projectId) {
+            setCollection([]);
+            setLoading(false);
+            return;
+        }
+
+        const fetchCollections = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const res = await axios.get(
+                    `${process.env.NEXT_PUBLIC_FETCH_URI}/getCollections/${projectId}`,
+                    {
+                        withCredentials: true,
+                    }
+                );
+
+                setCollection(res.data.data || []);
+            } catch (err) {
+                const data = err.response?.data
+
+                // backend says "No collections found" when the project is new, so just show an empty list
+                const isEmpty =
+                    err.response?.status === 404 ||
+                    (typeof data === "string" && data.includes("No collections found")) ||
+                    data?.message?.includes("No collections found")
+
+                if (isEmpty) {
+                    setCollection([]);
+                } else {
+                    console.error(
+                        "Error fetching collections:",
+                        data || err.message
+                    );
+
+                    setError(
+                        data?.message ||
+                        "Failed to fetch collections."
+                    );
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCollections();
+    }, [projectId, isReady]);
+
+    // everything below uses the data from backend
+    const filtered = collection.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
+    const totalDocs = collection.reduce((sum, c) => sum + (c.docs ?? 0), 0)
+    const totalFields = collection.reduce((sum, c) => sum + Object.keys(c.schema || {}).length, 0)
+
+    if (!isReady || loading) {
+        return (
+            <div className="min-h-screen bg-[#0b0b0f] text-white p-10">
+                Loading collections...
+            </div>
+        );
+    }
+
+    if (!projectId) {
+        return (
+            <div className="min-h-screen bg-[#0b0b0f] text-white p-10">
+                <h1 className="text-2xl font-semibold">
+                    No project selected
+                </h1>
+                <p className="text-white/60 mt-2">
+                    Please create or select a project first.
+                </p>
+                <Link
+                    href="/project"
+                    className="inline-block mt-5 bg-pink-600 rounded-lg px-5 py-2.5"
+                >
+                    Create project
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className='min-h-screen bg-[#0b0b0f] bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(190,40,80,0.30),transparent_70%)] text-white px-4 py-10'>
@@ -38,11 +119,16 @@ const Collections = () => {
                     <Link href="/createCollection" className='text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>+ New collection</Link>
                 </div>
 
+                {/* Error */}
+                {error && (
+                    <p className='bg-pink-500/10 border border-pink-500/30 text-pink-300 text-sm rounded-lg px-4 py-3 mt-6'>{error}</p>
+                )}
+
                 {/* Stats */}
                 <div className='grid grid-cols-3 gap-3 mt-6'>
                     <div className='bg-white/[0.03] border border-white/10 rounded-xl p-4'>
                         <p className='text-xs text-white/60'>Collections</p>
-                        <p className='text-2xl font-medium mt-2'>{collections.length}</p>
+                        <p className='text-2xl font-medium mt-2'>{collection.length}</p>
                     </div>
                     <div className='bg-white/[0.03] border border-white/10 rounded-xl p-4'>
                         <p className='text-xs text-white/60'>Documents</p>
@@ -72,21 +158,25 @@ const Collections = () => {
 
                     {/* Rows */}
                     {filtered.map((c) => (
-                        <Link key={c.name} href={`/collections/${c.name}`} className='grid grid-cols-[1fr_60px_90px] gap-3 items-center py-5 border-b border-white/10 hover:bg-white/5 rounded-lg'>
+                        <Link key={c._id} href={`/collections/${c.name}`} className='grid grid-cols-[1fr_60px_90px] gap-3 items-center py-5 border-b border-white/10 hover:bg-white/5 rounded-lg'>
                             <div className='flex items-center gap-3'>
-                                <div className='w-10 h-10 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-400 flex items-center justify-center shrink-0'>{c.icon}</div>
+                                <div className='w-10 h-10 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-400 flex items-center justify-center shrink-0'>
+                                    <svg className='w-5 h-5' viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5V19A9 3 0 0 0 21 19V5" /><path d="M3 12A9 3 0 0 0 21 12" /></svg>
+                                </div>
                                 <div>
                                     <p className='font-medium'>{c.name}</p>
-                                    <p className='text-white/50 text-xs mt-0.5'>{c.desc}</p>
+                                    <p className='text-white/50 text-xs mt-0.5'>{c.isSystem ? "System collection" : "Custom collection"} · {Object.keys(c.schema || {}).length} fields</p>
                                 </div>
                             </div>
-                            <span className='text-sm'>{c.docs}</span>
-                            <span className='text-sm text-white/70'>{c.updated}</span>
+                            <span className='text-sm'>{c.docs ?? 0}</span>
+                            <span className='text-sm text-white/70'>{timeAgo(c.updatedAt)}</span>
                         </Link>
                     ))}
 
                     {filtered.length === 0 && (
-                        <p className='text-center text-white/50 text-sm py-8'>No collections found.</p>
+                        <p className='text-center text-white/50 text-sm py-8'>
+                            {collection.length === 0 ? "No collections yet. Click + New collection to add one." : "No collections found."}
+                        </p>
                     )}
 
                     <p className='text-white/50 text-xs mt-4'>Select a collection to view its documents and fields.</p>
