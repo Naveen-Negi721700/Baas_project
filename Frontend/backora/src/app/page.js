@@ -17,7 +17,7 @@ export default function Home() {
 
                     <div className='flex flex-wrap justify-center gap-3 mt-7'>
                         <Link href="/login" className='bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl font-medium text-sm rounded-lg px-5 py-3'>Start building free →</Link>
-                        <Link href="#" className='border border-white/20 hover:bg-white/10 font-medium text-sm rounded-lg px-5 py-3'>Explore docs</Link>
+                        <Link href="/docs" className='border border-white/20 hover:bg-white/10 font-medium text-sm rounded-lg px-5 py-3'>Explore docs</Link>
                     </div>
                 </div>
 

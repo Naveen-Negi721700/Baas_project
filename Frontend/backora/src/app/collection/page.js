@@ -22,6 +22,11 @@ const Collections = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [apiKey, setApiKey] = useState(null);
+    const [generating, setGenerating] = useState(false);
+    const [copied, setCopied] = useState("");
+    const [hasKey, setHasKey] = useState(false);
+
     useEffect(() => {
         if (!isReady) return;
 
@@ -74,6 +79,77 @@ const Collections = () => {
         fetchCollections();
     }, [projectId, isReady]);
 
+    // one api key per project: remember if it already has one, and show the saved key again after a refresh
+    useEffect(() => {
+        if (projectId) {
+            setHasKey(localStorage.getItem(`apiKeyCreated_${projectId}`) === "true")
+
+            try {
+                const saved = localStorage.getItem(`apiKeyData_${projectId}`)
+                setApiKey(saved ? JSON.parse(saved) : null)
+            } catch (error) {
+                localStorage.removeItem(`apiKeyData_${projectId}`)
+            }
+        }
+    }, [projectId]);
+
+    // generate a new api key for this project
+    const handleGenerateKey = async () => {
+        try {
+            setGenerating(true);
+            setError("");
+            setCopied("");
+
+            const res = await axios.post(
+                `${process.env.NEXT_PUBLIC_FETCH_URI}/createApiKey/${projectId}`,
+                { name: "My API Key", type: "secret" },
+                {
+                    withCredentials: true,
+                }
+            );
+
+            const data = res.data.data
+
+            if (data?.apiKeyValue) {
+                const newKey = { id: data.keyId, value: data.apiKeyValue }
+                setApiKey(newKey)
+                localStorage.setItem(`apiKeyData_${projectId}`, JSON.stringify(newKey))
+            } else {
+                setError("API key was created, but the response has no key field.")
+            }
+
+            // one key per project: hide the button from now on
+            setHasKey(true)
+            localStorage.setItem(`apiKeyCreated_${projectId}`, "true")
+        } catch (err) {
+            const raw = err.response?.data
+            const text = typeof raw === "string" ? raw : raw?.message || ""
+            console.error("Error creating api key:", raw || err.message)
+
+            // backend says this project already has a key, so hide the button
+            if (/already/i.test(text)) {
+                setHasKey(true)
+                localStorage.setItem(`apiKeyCreated_${projectId}`, "true")
+            }
+
+            setError(raw?.message || "Failed to generate API key.")
+        } finally {
+            setGenerating(false);
+        }
+    }
+
+    // the cross button: hide the box and delete the key id and key from localStorage
+    const handleCloseKey = () => {
+        setApiKey(null)
+        localStorage.removeItem(`apiKeyData_${projectId}`)
+    }
+
+    const handleCopy = async (text, label) => {
+        await navigator.clipboard.writeText(text)
+        setCopied(label)
+        setTimeout(() => setCopied(""), 2000)
+    }
+
     // everything below uses the data from backend
     const filtered = collection.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
     const totalDocs = collection.reduce((sum, c) => sum + (c.docs ?? 0), 0)
@@ -116,12 +192,63 @@ const Collections = () => {
                         <h1 className='text-3xl font-semibold'>Collections</h1>
                         <p className='text-white/60 text-sm mt-2 max-w-xs'>Organize and manage your project data.</p>
                     </div>
-                    <Link href="/createCollection" className='text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>+ New collection</Link>
+
+                    <div className='flex flex-wrap gap-3'>
+                        {/* Shows only after a collection exists, and disappears once the project has an api key */}
+                        {collection.length > 0 && !hasKey && (
+                            <button onClick={handleGenerateKey} disabled={generating} className='border border-pink-500/60 hover:bg-pink-500/10 disabled:opacity-50 font-medium text-sm rounded-lg px-5 py-2.5'>
+                                {generating ? "Generating..." : "Generate API key"}
+                            </button>
+                        )}
+                        {/* After the key box is closed, the how to use button stays in the header */}
+                        {hasKey && !apiKey && (
+                            <Link href="/docs" className='border border-pink-500/60 hover:bg-pink-500/10 font-medium text-sm rounded-lg px-5 py-2.5'>How to use</Link>
+                        )}
+                        <Link href="/createCollection" className='text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>+ New collection</Link>
+                    </div>
                 </div>
 
                 {/* Error */}
                 {error && (
                     <p className='bg-pink-500/10 border border-pink-500/30 text-pink-300 text-sm rounded-lg px-4 py-3 mt-6'>{error}</p>
+                )}
+
+                {/* New API key */}
+                {apiKey && (
+                    <div className='bg-pink-500/10 border border-pink-500/30 rounded-xl p-4 mt-6'>
+                        <div className='flex justify-between items-start gap-3'>
+                            <p className='text-sm font-medium'>Your new API key</p>
+                            <button onClick={handleCloseKey} aria-label="Close" className='text-white/50 hover:text-white'>
+                                <svg className='w-4 h-4' viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                            </button>
+                        </div>
+
+                        <p className='text-white/50 text-xs mt-3'>Key ID</p>
+                        <div className='flex flex-col sm:flex-row gap-3 mt-1'>
+                            <p className='flex-1 min-w-0 bg-black/40 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm text-pink-300 break-all'>{apiKey.id}</p>
+                            <button onClick={() => handleCopy(apiKey.id, "id")} className='border border-white/20 hover:bg-white/10 text-sm rounded-lg px-4 py-2 shrink-0'>{copied === "id" ? "Copied!" : "Copy"}</button>
+                        </div>
+
+                        <p className='text-white/50 text-xs mt-4'>API key</p>
+                        <div className='flex flex-col sm:flex-row gap-3 mt-1'>
+                            <p className='flex-1 min-w-0 bg-black/40 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm text-pink-300 break-all'>{apiKey.value}</p>
+                            <button onClick={() => handleCopy(apiKey.value, "key")} className='border border-white/20 hover:bg-white/10 text-sm rounded-lg px-4 py-2 shrink-0'>{copied === "key" ? "Copied!" : "Copy"}</button>
+                        </div>
+
+                        {collection.map((c) => (
+                            <div key={c._id}>
+                                <p className='text-white/50 text-xs mt-4'>Collection ID · {c.name}</p>
+                                <div className='flex flex-col sm:flex-row gap-3 mt-1'>
+                                    <p className='flex-1 min-w-0 bg-black/40 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm text-pink-300 break-all'>{c._id}</p>
+                                    <button onClick={() => handleCopy(c._id, `col-${c._id}`)} className='border border-white/20 hover:bg-white/10 text-sm rounded-lg px-4 py-2 shrink-0'>{copied === `col-${c._id}` ? "Copied!" : "Copy"}</button>
+                                </div>
+                            </div>
+                        ))}
+
+                        <p className='text-white/50 text-xs mt-3'>Copy it and keep it secret, because anyone with it can access your project data. When you click the cross, the key is deleted from this browser and can't be shown again.</p>
+
+                        <Link href="/docs" className='inline-block mt-4 text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>How to use</Link>
+                    </div>
                 )}
 
                 {/* Stats */}
