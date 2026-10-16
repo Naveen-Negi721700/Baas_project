@@ -57,7 +57,7 @@ const Sidebar = () => {
                     <span>Project</span>
                 </Link>
 
-                <Link href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg font-medium hover:bg-white/5">
+                <Link href="/database" className="flex items-center gap-3 px-3 py-2 rounded-lg font-medium hover:bg-white/5">
                     <svg className="w-4 h-4 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect width="20" height="14" x="2" y="5" rx="2" />
                         <line x1="2" x2="22" y1="10" y2="10" />
