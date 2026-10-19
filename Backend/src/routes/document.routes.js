@@ -10,3 +10,4 @@ routes.route("/updateCollection/:projectId/:collectionId").patch(verifyJWT, upda
 routes.route("/deleteCollection/:projectId/:collectionId").delete(verifyJWT, deleteCollection );
 
 export default routes;
+

@@ -11,3 +11,4 @@ routes.route("/getCurrentUser").get(verifyApiKey,verifyProjectUser, getCurrentUs
 routes.route("/refreshAccessToken").post(verifyApiKey, refreshAccessToken);
 
 export default routes;
+
