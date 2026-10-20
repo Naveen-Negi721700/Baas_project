@@ -1,59 +1,83 @@
+
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
-import axios from "axios";
+import api from "@/app/lib/api";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useProject } from "../context/projectContext";
 
 const CreateProject = () => {
-    const [form, setform] = useState({ title: "", description: "", });
+    const [form, setform] = useState({
+        title: "",
+        description: "",
+    });
+
     const [region, setRegion] = useState("Asia Pacific (Mumbai)");
+    const [loading, setLoading] = useState(false);
+
     const { setSelectedProject } = useProject();
     const router = useRouter();
 
     const handleChange = (e) => {
-        setform({ ...form, [e.target.name]: e.target.value });
+        setform({
+            ...form,
+            [e.target.name]: e.target.value,
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (loading) return;
+
+        setLoading(true);
+
         try {
-            const res = await axios.post(
-                `${process.env.NEXT_PUBLIC_FETCH_URI}/createProject`,
-                form,
-                {
-                    withCredentials: true,
-                }
-            );
+            const res = await api.post("/createProject", {
+                ...form,
+                // Region is included in the request.
+                // The backend must support this field to save it.
+                region,
+            });
 
             console.log(res.data);
-            // Adjust this according to your actual backend response.
+
+            // Support either response format:
+            // { data: { _id: "...", ... } }
+            // or { _id: "...", ... }
             const project = res.data.data ?? res.data;
 
             if (!project?._id) {
-                throw new Error("Project ID was not returned by the backend");
+                throw new Error(
+                    "Project ID was not returned by the backend"
+                );
             }
 
-            // Save the newly created project in Context.
+            // Save the created project in context.
             setSelectedProject(project);
+
             setform({
                 title: "",
                 description: "",
             });
 
             toast.success("Project created successfully!");
-            router.push("/collection");
 
+            router.push("/collection");
         } catch (error) {
-            console.error(error.response?.data || error.message);
+            console.error(
+                error.response?.data || error.message
+            );
 
             toast.error(
                 error.response?.data?.message ||
+                error.message ||
                 "Failed to create project"
             );
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -118,7 +142,7 @@ const CreateProject = () => {
                         />
                     </div>
 
-                    {/* Region - frontend only */}
+                    {/* Region */}
                     <div className="flex flex-col gap-2">
                         <label
                             htmlFor="region"
@@ -132,19 +156,36 @@ const CreateProject = () => {
                                 id="region"
                                 name="region"
                                 value={region}
-                                onChange={(e) => setRegion(e.target.value)}
+                                onChange={(e) =>
+                                    setRegion(e.target.value)
+                                }
                                 className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-pink-500"
                             >
-                                <option className="bg-[#0b0b0f]">
+                                <option
+                                    value="Asia Pacific (Mumbai)"
+                                    className="bg-[#0b0b0f]"
+                                >
                                     Asia Pacific (Mumbai)
                                 </option>
-                                <option className="bg-[#0b0b0f]">
+
+                                <option
+                                    value="Asia Pacific (Singapore)"
+                                    className="bg-[#0b0b0f]"
+                                >
                                     Asia Pacific (Singapore)
                                 </option>
-                                <option className="bg-[#0b0b0f]">
+
+                                <option
+                                    value="US East (N. Virginia)"
+                                    className="bg-[#0b0b0f]"
+                                >
                                     US East (N. Virginia)
                                 </option>
-                                <option className="bg-[#0b0b0f]">
+
+                                <option
+                                    value="Europe (Frankfurt)"
+                                    className="bg-[#0b0b0f]"
+                                >
                                     Europe (Frankfurt)
                                 </option>
                             </select>
@@ -180,13 +221,21 @@ const CreateProject = () => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
-                                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                    <ellipse
+                                        cx="12"
+                                        cy="5"
+                                        rx="9"
+                                        ry="3"
+                                    />
                                     <path d="M3 5V19A9 3 0 0 0 21 19V5" />
                                     <path d="M3 12A9 3 0 0 0 21 12" />
                                 </svg>
 
                                 <div>
-                                    <p className="font-medium">MongoDB</p>
+                                    <p className="font-medium">
+                                        MongoDB
+                                    </p>
+
                                     <p className="text-white/50 text-xs mt-0.5">
                                         Flexible document database
                                     </p>
@@ -221,17 +270,18 @@ const CreateProject = () => {
 
                         <button
                             type="submit"
-                            className="text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5"
+                            disabled={loading}
+                            className="text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Create project →
+                            {loading
+                                ? "Creating..."
+                                : "Create project →"}
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     );
-
-
 };
 
-export default CreateProject
+export default CreateProject;
