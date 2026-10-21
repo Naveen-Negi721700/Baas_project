@@ -34,6 +34,10 @@ import publicRoutes from "./routes/public.routes/public.routes.js";
 app.use("/api/v1/public", publicRoutes);
 
 
+import aiRouter from "./routes/ai.routes.js";
+app.use("/api/v1/Baas", aiRouter);
+
+
 app.use(errorHandler);
 
 
