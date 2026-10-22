@@ -19,7 +19,7 @@ const askAI = asyncHandler(async (req, res) => {
 
     // only keep the last few valid messages of the conversation
     const cleanHistory = Array.isArray(history)
-        ? history
+        ? history  
             .filter(
                 (m) =>
                     m &&
