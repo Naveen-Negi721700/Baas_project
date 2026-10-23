@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { verifyJWT } from "../middlewares/auth.middlewares.js";
-import { askAI } from "../controllers/ai.controllers.js";
+import { askAI } from "../controllers/Ai.controllers.js";
 
 const router = Router();
 
