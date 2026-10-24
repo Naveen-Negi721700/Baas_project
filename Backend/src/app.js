@@ -16,6 +16,13 @@ app.use(express.urlencoded({extended: true}))
 app.use(express.static("public"))
 app.use(cookieParser())
 
+import { globalLimiter } from "./middlewares/ratelimiter.middlewares.js";
+
+// only behind a proxy or host (Render, nginx...), otherwise the IP can be faked
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
+
+app.use("/api", globalLimiter);
+
 
 import authRoutes from "./routes/auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
@@ -40,9 +47,4 @@ app.use("/api/v1/Baas", aiRouter);
 
 app.use(errorHandler);
 
-
 export default app
-// app.use("/api/v1/auth", authRoutes);
-// app.use("/api/v1/projects", projectRoutes);
-// app.use("/api/v1/api-keys", apiKeyRoutes);
-// app.use("/api/v1/collections", collectionRoutes);
