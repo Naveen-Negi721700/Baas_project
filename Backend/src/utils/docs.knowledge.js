@@ -13,7 +13,7 @@ The full documentation, with copy-ready examples, is the "How to use" page of th
 To use a collection in your own app you need three values. Copy them from the Collections page after the API key is generated:
 1. API key: starts with sk_ and goes in the x-api-key header.
 2. Key ID: identifies the key and goes in the x-api-key-id header.
-3. Collection ID: goes at the end of every URL, in place of YOUR_COLLECTION_ID.
+3. Collection ID: goes at the end of the register and loginUser URLs, in place of YOUR_COLLECTION_ID. The other routes do not need it.
 The API key is shown only once, so copy it and keep it secret.
 
 Base URL: ${BASE_URL}
@@ -55,19 +55,19 @@ Use the same headers and the same fetch pattern as Register User, with this URL 
 
 ### Logout User (sign out)
 Logs the current user out.
-POST ${BASE_URL}/logoutUser/YOUR_COLLECTION_ID
+POST ${BASE_URL}/logoutUser
 No body. Same headers and the same fetch pattern as Register User, without the body.
 Response (200): { "statusCode": 200, "data": {}, "message": "Logged out successfully", "success": true }
 
 ### Get Current User
 Gets the details of the user who is logged in right now.
-GET ${BASE_URL}/getCurrentUser/YOUR_COLLECTION_ID
+GET ${BASE_URL}/getCurrentUser
 No body. Same headers, with credentials: "include" so the login cookie is sent.
 Response (200): { "statusCode": 200, "data": { "_id": "USER_ID", "username": "john123", "email": "user@example.com" }, "message": "User fetched successfully", "success": true }
 
 ### Refresh Access Token
 Gets a new access token when the old one has expired.
-POST ${BASE_URL}/refreshAccessToken/YOUR_COLLECTION_ID
+POST ${BASE_URL}/refreshAccessToken
 No body. Same headers, with credentials: "include".
 Response (200): { "statusCode": 200, "data": { "accessToken": "NEW_ACCESS_TOKEN" }, "message": "Access token refreshed successfully", "success": true }
 `;

@@ -46,11 +46,12 @@ export const loginLimiter = rateLimit({
     handler: tooMany("Too many login attempts. Please try again in 15 minutes."),
 });
 
-// 3. Signup: 5 new accounts per hour for each IP
+// 3. Signup: 5 new accounts per hour for each IP (failed attempts, like a typo, are not counted)
 export const signupLimiter = rateLimit({
     ...baseOptions,
     windowMs: 60 * 60 * 1000,
     limit: 5,
+    skipFailedRequests: true,
     store: makeStore("signup"),
     keyGenerator: byIp,
     handler: tooMany("Too many accounts created from this network. Please try again later."),
