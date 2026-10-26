@@ -9,15 +9,13 @@ export const redisClient = createClient({
     // when Redis is down, fail fast instead of making every request wait
     disableOfflineQueue: true,
 
-    socket: {
-        connectTimeout: 3000,
+   socket: {
+    connectTimeout: 10000,
 
-        // before the first connection works, give up at once; afterwards keep trying again
-        reconnectStrategy: (retries) =>
-            redisReady
-                ? Math.min(retries * 200, 5000)
-                : new Error("Redis is not available"),
-    },
+    // Retry temporary connection failures
+    reconnectStrategy: (retries) =>
+        Math.min(retries * 500, 5000),
+},
 });
 
 redisClient.on("error", (error) => {
