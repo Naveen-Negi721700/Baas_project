@@ -107,12 +107,14 @@ const registerUser = asyncHandler(async (req, res) => {
         avatar: avatar.url
     })
 
-    try {
-        await sendWelcomeEmail(user.email, user.username);
+   // Send email in the background without delaying signup
+sendWelcomeEmail(user.email, user.username)
+    .then(() => {
         console.log("Welcome email sent successfully");
-    } catch (error) {
+    })
+    .catch((error) => {
         console.error("Welcome email failed:", error.message);
-    }
+    });
 
 
     const createdUser = await User.findById(user._id).select("-password ")
@@ -177,14 +179,14 @@ const loginUser = asyncHandler(async (req, res) => {
         await getAccessAndRefreshToken(user._id);
 
     // Step 6: Send login notification to the registered email
-    // Email failure must not prevent a successful login.
-    try {
-        const info = await sendLoginEmail(user.email, user.username);
-
+   // Send login notification in the background
+sendLoginEmail(user.email, user.username)
+    .then((info) => {
         console.log("Login notification sent:", info.messageId);
-    } catch (error) {
+    })
+    .catch((error) => {
         console.error("Login email failed:", error.message);
-    }
+    });
 
     // Step 7: Fetch user data without sensitive fields
     const loggedInUser = await User.findById(user._id)
