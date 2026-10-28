@@ -212,7 +212,7 @@ const Collections = () => {
                         )}
                         {/* After the key box is closed, the how to use button stays in the header */}
                         {hasKey && !apiKey && (
-                            <Link href="/howToUse" className='border border-pink-500/60 hover:bg-pink-500/10 font-medium text-sm rounded-lg px-5 py-2.5'>How to use</Link>
+                            <Link href="/docs" className='border border-pink-500/60 hover:bg-pink-500/10 font-medium text-sm rounded-lg px-5 py-2.5'>How to use</Link>
                         )}
                         <Link href="/createCollection" className='text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>+ New collection</Link>
                     </div>
@@ -257,7 +257,7 @@ const Collections = () => {
 
                         <p className='text-white/50 text-xs mt-3'>Copy it and keep it secret, because anyone with it can access your project data. When you click the cross, the key is deleted from this browser and can't be shown again.</p>
 
-                        <Link href="/howToUse" className='inline-block mt-4 text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>How to use</Link>
+                        <Link href="/docs" className='inline-block mt-4 text-white bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-500/30 font-medium text-sm rounded-lg px-5 py-2.5'>How to use</Link>
                     </div>
                 )}
 

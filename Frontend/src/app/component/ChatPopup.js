@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 
 import api from "@/app/lib/api";
 import { useRouter } from "next/navigation";
@@ -49,9 +50,20 @@ const CodeBlock = ({ language, code }) => {
     );
 };
 
-// **bold** and `code` inside a line
+// **bold**, `code` and [links](/page) inside a line
 const renderInline = (text) =>
-    text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) => {
+    text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(\/[^)\s]*\))/g).map((part, i) => {
+        // only links inside the app are allowed (they start with /)
+        const link = part.match(/^\[([^\]]+)\]\((\/[^)\s]*)\)$/);
+
+        if (link) {
+            return (
+                <Link key={i} href={link[2]} className="text-pink-400 underline underline-offset-2 hover:text-pink-300">
+                    {link[1]}
+                </Link>
+            );
+        }
+
         if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
             return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>;
         }
@@ -121,13 +133,17 @@ const stepLabel = (e) => {
 
 const ChatPopup = () => {
     const { user } = useAuth();
-    const { setSelectedProject } = useProject();
+    const { selectedProject, setSelectedProject } = useProject();
     const router = useRouter();
 
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState([GREETING]);
     const [input, setInput] = useState("");
     const [sending, setSending] = useState(false);
+
+    // the project waiting for the user's confirmation to be deleted
+    const [pendingDelete, setPendingDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const bottomRef = useRef(null);
     const inputRef = useRef(null);
@@ -166,12 +182,23 @@ const ChatPopup = () => {
         setSending(true);
 
         try {
-            const res = await api.post("/askAI", { prompt, history });
+            const res = await api.post("/askAI", {
+                prompt,
+                history,
+                context: {
+                    selectedProject: selectedProject
+                        ? { id: selectedProject._id, name: selectedProject.name }
+                        : null,
+                },
+            });
             const { answer, effects = [] } = res.data.data;
 
             // apply what the assistant did for the user
             effects.forEach((e) => {
                 if (e.type === "project") setSelectedProject(e.project);
+
+                // the assistant never deletes by itself, the user must confirm in the box
+                if (e.type === "confirmDelete") setPendingDelete(e.project);
 
                 if (e.type === "apiKey") {
                     // the same keys the Collections page reads, so the key shows up there
@@ -201,6 +228,56 @@ const ChatPopup = () => {
         } finally {
             setSending(false);
         }
+    };
+
+    // the user clicked Delete in the confirmation box
+    const handleConfirmDelete = async () => {
+        if (!pendingDelete || deleting) return;
+
+        const project = pendingDelete;
+        setDeleting(true);
+
+        try {
+            await api.delete(`/deleteProject/${project.id}`);
+
+            // clean up what is saved in this browser for the project
+            localStorage.removeItem(`apiKeyCreated_${project.id}`);
+            localStorage.removeItem(`apiKeyData_${project.id}`);
+            if (selectedProject?._id === project.id) setSelectedProject(null);
+
+            window.dispatchEvent(new Event("backora-data-changed"));
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Done. The project "${project.name}" and its collections, data and API key were deleted.`,
+                },
+            ]);
+        } catch (error) {
+            const data = error.response?.data;
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: data?.message || "Sorry, the project could not be deleted. Please try again.",
+                    error: true,
+                },
+            ]);
+        } finally {
+            setDeleting(false);
+            setPendingDelete(null);
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setPendingDelete(null);
+
+        setMessages((prev) => [
+            ...prev,
+            { role: "assistant", text: "Okay, I did not delete anything." },
+        ]);
     };
 
     const handleSubmit = (e) => {
@@ -370,6 +447,52 @@ const ChatPopup = () => {
                 </div>
             )}
 
+            {/* Delete confirmation box */}
+            {pendingDelete && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+                    style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+                >
+                    <div className="w-full max-w-sm bg-[#0b0b0f] border border-white/10 rounded-2xl p-6 text-center">
+                        <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                        </div>
+
+                        <h2 className="text-xl font-semibold mt-5">Delete project?</h2>
+
+                        <p className="text-white/60 text-sm mt-2">
+                            Are you sure you want to delete{" "}
+                            <span className="text-white font-medium">{pendingDelete.name}</span>?
+                            Its collections, data and API key will be deleted permanently. This cannot be undone.
+                        </p>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                type="button"
+                                onClick={handleCancelDelete}
+                                disabled={deleting}
+                                className="flex-1 border border-white/20 hover:bg-white/10 font-medium text-sm rounded-lg px-5 py-3 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleConfirmDelete}
+                                disabled={deleting}
+                                className="flex-1 text-white bg-gradient-to-br from-rose-600 to-red-600 hover:bg-gradient-to-bl font-medium text-sm rounded-lg px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {deleting ? "Deleting..." : "Delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Round button in the corner */}
             <button
                 type="button"
@@ -401,17 +524,14 @@ export default ChatPopup;
 
 
 
-
-
-
-
-
 // "use client";
 
 // import React, { useState, useRef, useEffect } from "react";
 
 // import api from "@/app/lib/api";
+// import { useRouter } from "next/navigation";
 // import { useAuth } from "@/app/context/authContext";
+// import { useProject } from "@/app/context/projectContext";
 
 // const GREETING = {
 //     role: "assistant",
@@ -420,7 +540,7 @@ export default ChatPopup;
 
 // // quick questions shown before the first message
 // const SUGGESTIONS = [
-//     "How do I create a project?",
+//     "Create a project called todo-list with an API key",
 //     "How do I generate an API key?",
 //     "What are collections?",
 // ];
@@ -517,13 +637,27 @@ export default ChatPopup;
 //     return nodes;
 // };
 
+// // a short line for everything the assistant did for the user
+// const stepLabel = (e) => {
+//     if (e.type === "project") return `Project "${e.project?.name}" created`;
+//     if (e.type === "collection") return `Collection "${e.name}" added`;
+//     if (e.type === "apiKey") return "API key generated";
+//     return "";
+// };
+
 // const ChatPopup = () => {
 //     const { user } = useAuth();
+//     const { selectedProject, setSelectedProject } = useProject();
+//     const router = useRouter();
 
 //     const [open, setOpen] = useState(false);
 //     const [messages, setMessages] = useState([GREETING]);
 //     const [input, setInput] = useState("");
 //     const [sending, setSending] = useState(false);
+
+//     // the project waiting for the user's confirmation to be deleted
+//     const [pendingDelete, setPendingDelete] = useState(null);
+//     const [deleting, setDeleting] = useState(false);
 
 //     const bottomRef = useRef(null);
 //     const inputRef = useRef(null);
@@ -550,16 +684,49 @@ export default ChatPopup;
 //         const prompt = text.trim();
 //         if (!prompt || sending) return;
 
+//         // the earlier messages (without the greeting), so the assistant remembers the chat
+//         const history = messages
+//             .slice(1)
+//             .filter((m) => !m.error)
+//             .slice(-8)
+//             .map((m) => ({ role: m.role, text: m.text }));
+
 //         setMessages((prev) => [...prev, { role: "user", text: prompt }]);
 //         setInput("");
 //         setSending(true);
 
 //         try {
-//             const res = await api.post("/askAI", { prompt });
+//             const res = await api.post("/askAI", {
+//                 prompt,
+//                 history,
+//                 context: {
+//                     selectedProject: selectedProject
+//                         ? { id: selectedProject._id, name: selectedProject.name }
+//                         : null,
+//                 },
+//             });
+//             const { answer, effects = [] } = res.data.data;
+
+//             // apply what the assistant did for the user
+//             effects.forEach((e) => {
+//                 if (e.type === "project") setSelectedProject(e.project);
+
+//                 // the assistant never deletes by itself, the user must confirm in the box
+//                 if (e.type === "confirmDelete") setPendingDelete(e.project);
+
+//                 if (e.type === "apiKey") {
+//                     // the same keys the Collections page reads, so the key shows up there
+//                     localStorage.setItem(`apiKeyData_${e.projectId}`, JSON.stringify({ id: e.keyId, value: e.value }));
+//                     localStorage.setItem(`apiKeyCreated_${e.projectId}`, "true");
+//                 }
+//             });
+
+//             // tell the open pages (like Collections) to reload
+//             if (effects.length > 0) window.dispatchEvent(new Event("backora-data-changed"));
 
 //             setMessages((prev) => [
 //                 ...prev,
-//                 { role: "assistant", text: res.data.data.answer },
+//                 { role: "assistant", text: answer, steps: effects.map(stepLabel).filter(Boolean) },
 //             ]);
 //         } catch (error) {
 //             const data = error.response?.data;
@@ -575,6 +742,56 @@ export default ChatPopup;
 //         } finally {
 //             setSending(false);
 //         }
+//     };
+
+//     // the user clicked Delete in the confirmation box
+//     const handleConfirmDelete = async () => {
+//         if (!pendingDelete || deleting) return;
+
+//         const project = pendingDelete;
+//         setDeleting(true);
+
+//         try {
+//             await api.delete(`/deleteProject/${project.id}`);
+
+//             // clean up what is saved in this browser for the project
+//             localStorage.removeItem(`apiKeyCreated_${project.id}`);
+//             localStorage.removeItem(`apiKeyData_${project.id}`);
+//             if (selectedProject?._id === project.id) setSelectedProject(null);
+
+//             window.dispatchEvent(new Event("backora-data-changed"));
+
+//             setMessages((prev) => [
+//                 ...prev,
+//                 {
+//                     role: "assistant",
+//                     text: `Done. The project "${project.name}" and its collections, data and API key were deleted.`,
+//                 },
+//             ]);
+//         } catch (error) {
+//             const data = error.response?.data;
+
+//             setMessages((prev) => [
+//                 ...prev,
+//                 {
+//                     role: "assistant",
+//                     text: data?.message || "Sorry, the project could not be deleted. Please try again.",
+//                     error: true,
+//                 },
+//             ]);
+//         } finally {
+//             setDeleting(false);
+//             setPendingDelete(null);
+//         }
+//     };
+
+//     const handleCancelDelete = () => {
+//         setPendingDelete(null);
+
+//         setMessages((prev) => [
+//             ...prev,
+//             { role: "assistant", text: "Okay, I did not delete anything." },
+//         ]);
 //     };
 
 //     const handleSubmit = (e) => {
@@ -657,6 +874,27 @@ export default ChatPopup;
 
 //                                     <div className={`min-w-0 bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm leading-6 break-words ${m.error ? "text-pink-300" : ""}`}>
 //                                         {m.error ? m.text : renderMessage(m.text)}
+
+//                                         {m.steps?.length > 0 && (
+//                                             <div className="mt-3 pt-3 border-t border-white/10 flex flex-col gap-1.5 text-xs">
+//                                                 {m.steps.map((step, n) => (
+//                                                     <div key={n} className="flex items-center gap-1.5 text-pink-300">
+//                                                         <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+//                                                             <path d="M20 6 9 17l-5-5" />
+//                                                         </svg>
+//                                                         <span>{step}</span>
+//                                                     </div>
+//                                                 ))}
+
+//                                                 <button
+//                                                     type="button"
+//                                                     onClick={() => router.push("/collection")}
+//                                                     className="self-start mt-1 border border-pink-500/40 text-pink-300 hover:bg-pink-500/10 rounded-full px-3 py-1.5"
+//                                                 >
+//                                                     Open collections →
+//                                                 </button>
+//                                             </div>
+//                                         )}
 //                                     </div>
 //                                 </div>
 //                             )
@@ -723,6 +961,52 @@ export default ChatPopup;
 //                 </div>
 //             )}
 
+//             {/* Delete confirmation box */}
+//             {pendingDelete && (
+//                 <div
+//                     className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+//                     style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+//                 >
+//                     <div className="w-full max-w-sm bg-[#0b0b0f] border border-white/10 rounded-2xl p-6 text-center">
+//                         <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+//                             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//                                 <path d="M3 6h18" />
+//                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+//                                 <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+//                             </svg>
+//                         </div>
+
+//                         <h2 className="text-xl font-semibold mt-5">Delete project?</h2>
+
+//                         <p className="text-white/60 text-sm mt-2">
+//                             Are you sure you want to delete{" "}
+//                             <span className="text-white font-medium">{pendingDelete.name}</span>?
+//                             Its collections, data and API key will be deleted permanently. This cannot be undone.
+//                         </p>
+
+//                         <div className="flex gap-3 mt-6">
+//                             <button
+//                                 type="button"
+//                                 onClick={handleCancelDelete}
+//                                 disabled={deleting}
+//                                 className="flex-1 border border-white/20 hover:bg-white/10 font-medium text-sm rounded-lg px-5 py-3 disabled:opacity-50"
+//                             >
+//                                 Cancel
+//                             </button>
+
+//                             <button
+//                                 type="button"
+//                                 onClick={handleConfirmDelete}
+//                                 disabled={deleting}
+//                                 className="flex-1 text-white bg-gradient-to-br from-rose-600 to-red-600 hover:bg-gradient-to-bl font-medium text-sm rounded-lg px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+//                             >
+//                                 {deleting ? "Deleting..." : "Delete"}
+//                             </button>
+//                         </div>
+//                     </div>
+//                 </div>
+//             )}
+
 //             {/* Round button in the corner */}
 //             <button
 //                 type="button"
@@ -745,3 +1029,4 @@ export default ChatPopup;
 // };
 
 // export default ChatPopup;
+

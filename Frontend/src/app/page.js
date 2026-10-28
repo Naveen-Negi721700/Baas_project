@@ -16,7 +16,7 @@ export default function Home() {
                     <p className='text-white/60 mt-5 max-w-md'>Authentication, database, and APIs in one place. Ship your ideas faster.</p>
 
                     <div className='flex flex-wrap justify-center gap-3 mt-7'>
-                        <Link href="/login" className='bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl font-medium text-sm rounded-lg px-5 py-3'>Start building free →</Link>
+                        <Link href="/project" className='bg-gradient-to-br from-pink-600 to-rose-500 hover:bg-gradient-to-bl font-medium text-sm rounded-lg px-5 py-3'>Start building free →</Link>
                         <Link href="/docs" className='border border-white/20 hover:bg-white/10 font-medium text-sm rounded-lg px-5 py-3'>Explore docs</Link>
                     </div>
                 </div>

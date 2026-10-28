@@ -1,5 +1,47 @@
 import { transporter } from "./email.config.js";
 
+// ------------------------------------------------------------------
+// How the emails are sent:
+// - If BREVO_API_KEY is set (use this on Render), they go through Brevo's HTTPS API.
+//   Render's free plan blocks the SMTP ports (25, 465, 587), but HTTPS always works.
+// - Otherwise they go through normal SMTP (fine for your own computer).
+// ------------------------------------------------------------------
+const deliver = async ({ to, subject, html, text }) => {
+    if (process.env.BREVO_API_KEY) {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+            method: "POST",
+            signal: AbortSignal.timeout(10000), // never wait more than 10 seconds
+            headers: {
+                "api-key": process.env.BREVO_API_KEY,
+                "Content-Type": "application/json",
+                accept: "application/json",
+            },
+            body: JSON.stringify({
+                // this address must be a verified sender in your Brevo account
+                sender: { name: "Backora Team", email: process.env.MAIL_FROM || process.env.SMTP_USER },
+                to: [{ email: to }],
+                subject,
+                htmlContent: html,
+                textContent: text,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Brevo request failed (${response.status}): ${await response.text()}`);
+        }
+
+        return response.json(); // { messageId: "..." }
+    }
+
+    return transporter.sendMail({
+        from: `"Backora Team" <${process.env.SMTP_USER}>`,
+        to,
+        subject,
+        text,
+        html,
+    });
+};
+
 // where the buttons in the emails lead (set CLIENT_URL in .env when you deploy)
 const APP_URL = process.env.CLIENT_URL || process.env.CORS_ORIGIN || "http://localhost:3000";
 
@@ -132,8 +174,7 @@ Open your dashboard: ${APP_URL}/project
 Happy building,
 The Backora Team`;
 
-    return await transporter.sendMail({
-        from: `"Backora Team" <${process.env.SMTP_USER}>`,
+    return await deliver({
         to: email,
         subject: "Welcome to Backora!",
         text,
@@ -206,8 +247,7 @@ Was this not you? Change your password right away and sign out of all your devic
 Best regards,
 The Backora Team`;
 
-    return await transporter.sendMail({
-        from: `"Backora Team" <${process.env.SMTP_USER}>`,
+    return await deliver({
         to: email,
         subject: "New sign-in to your Backora account",
         text,
