@@ -24,7 +24,7 @@
 | Frontend | Next.js, React, Tailwind CSS |
 | Backend | Node.js, Express.js |
 | Database | MongoDB |
-| Caching | Redis |
+| Rate-limiting | Redis |
 | Authentication | JWT, HTTP-only cookies |
 | Image Storage | Cloudinary |
 | AI Integration | Gemini API |
