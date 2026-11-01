@@ -15,7 +15,7 @@ const Footer = () => {
                             <svg className='w-5 h-5 text-pink-500' viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h6.2a5.3 5.3 0 0 1 3.1 9.6A5.6 5.6 0 0 1 13.4 21H6.5A2.5 2.5 0 0 1 4 18.5v-13Z" />
                             </svg>
-                            <span>Backore</span>
+                            <span>Backora</span>
                         </Link>
                         <p className='text-white/60 text-xs mt-3'>Build, ship and scale your backend without the busywork.</p>
 
@@ -60,7 +60,7 @@ const Footer = () => {
 
                 {/* Bottom */}
                 <div className='flex flex-col md:flex-row justify-between items-center gap-3 mt-8 pt-5 border-t border-white/10 text-xs text-white/60'>
-                    <p>© Backore. All rights reserved.</p>
+                    <p>© Backora. All rights reserved.</p>
                     <div className='flex gap-5'>
                         <Link href="#" className='hover:text-white'>Privacy</Link>
                         <Link href="#" className='hover:text-white'>Terms</Link>
