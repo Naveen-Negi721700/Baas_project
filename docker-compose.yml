@@ -1,0 +1,51 @@
+# Put this file in the Bass_project folder (next to Backend and Frontend).
+# Start everything with:  docker compose up --build
+
+services:
+  backend:
+    image: naveen72170/backora-backend:latest   # the name used on Docker Hub
+    build: ./Backend
+    container_name: backora-backend
+    ports:
+      - "8000:8000"
+    # all your secrets (MongoDB Atlas, JWT, Cloudinary, Gemini...) stay in Backend/.env
+    env_file:
+      - ./Backend/.env
+    # these values override the ones from .env, because inside Docker the addresses are different
+    environment:
+      PORT: 8000
+      REDIS_URL: redis://redis:6379      # the redis service below (not 127.0.0.1)
+      CORS_ORIGIN: http://localhost:3000 # the address of the frontend in the browser
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: naveen72170/backora-frontend:latest  # the name used on Docker Hub
+    build:
+      context: ./Frontend
+      args:
+        # the BROWSER calls the backend, so this is the address your browser can open
+        NEXT_PUBLIC_FETCH_URI: http://localhost:8000/api/v1/Baas
+    container_name: backora-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: backora-redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis-data:
